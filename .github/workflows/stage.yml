@@ -1,0 +1,52 @@
+name: stage
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    if: ${{ !contains(github.event.head_commit.message, '[data]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: fetch statcan open licence files
+        run: |
+          mkdir -p data
+          : > manifest.txt
+          ok=0
+          for u in \
+            "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip" \
+            "https://www12.statcan.gc.ca/census-recensement/2016/geo/ref/gaf/files-fichiers/2016_92-151_XBB_csv.zip" \
+            "https://www12.statcan.gc.ca/census-recensement/2011/geo/ref/files-fichiers/2011_92-151_XBB_txt.zip" \
+            "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/correspondence-correspondance/files-fichiers/2021_92-156-X_DB_ID.zip" \
+            "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/correspondence-correspondance/files-fichiers/2021_92-156-X_DA_AD.zip" \
+            "https://www12.statcan.gc.ca/census-recensement/2011/geo/ref/files-fichiers/2016/2016_92-156_DB_ID_csv.zip" \
+            "https://www12.statcan.gc.ca/census-recensement/2011/geo/ref/files-fichiers/2016/2016_92-156_DA_AD_csv.zip" \
+            "https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip"
+          do
+            f="data/$(basename "${u%%\?*}")"
+            echo "== $u"
+            if curl -fL --retry 4 --retry-delay 5 -A "Mozilla/5.0" -o "$f" "$u"; then
+              sz=$(stat -c%s "$f")
+              sha=$(sha256sum "$f" | cut -d' ' -f1)
+              echo "OK $(basename "$f") $sz $sha" >> manifest.txt
+              if [ "$sz" -gt 99000000 ]; then
+                split -b 90M -d "$f" "$f.part"
+                rm "$f"
+                echo "SPLIT $(basename "$f")" >> manifest.txt
+              fi
+              ok=$((ok+1))
+            else
+              echo "FAIL $u" >> manifest.txt
+            fi
+          done
+          echo "TOTAL_OK $ok/8" >> manifest.txt
+          cat manifest.txt
+      - name: commit data
+        run: |
+          git config user.name "staging-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data manifest.txt
+          git commit -m "stage files [data]" || echo "nothing to commit"
+          git push
