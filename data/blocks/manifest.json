@@ -1,0 +1,149 @@
+{
+  "tool": "harvest-blocks",
+  "layer": 13,
+  "layerName": "DB - ldb_000b21s_e",
+  "epsg": 3347,
+  "source": "https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer",
+  "fields": [
+    "DBUID",
+    "DBRPLAMX",
+    "DBRPLAMY"
+  ],
+  "shards": {
+    "NL": {
+      "code": "NL",
+      "pruid": 10,
+      "count": 9125,
+      "rawBytes": 549481,
+      "gzBytes": 126109,
+      "sha256": "1018b0d859881262427fdc9d00ef47cd9d69efa732504b2716853c499bf6340f",
+      "requests": 2,
+      "seconds": 1.6
+    },
+    "PE": {
+      "code": "PE",
+      "pruid": 11,
+      "count": 3348,
+      "rawBytes": 202415,
+      "gzBytes": 45828,
+      "sha256": "f0fe53ccdf120c0fc308fd705213ca9bc988c7946a537ec13b875e9c9959e1fa",
+      "requests": 1,
+      "seconds": 1
+    },
+    "NS": {
+      "code": "NS",
+      "pruid": 12,
+      "count": 15022,
+      "rawBytes": 907055,
+      "gzBytes": 205174,
+      "sha256": "b05da8c1a9f2eb4fdd0b248c05666c80396b46a46455373946abf75cfcdb64b5",
+      "requests": 3,
+      "seconds": 3.2
+    },
+    "NB": {
+      "code": "NB",
+      "pruid": 13,
+      "count": 13510,
+      "rawBytes": 816320,
+      "gzBytes": 185123,
+      "sha256": "55d588a1d779b011aab5b3ce55cb69ab285c5f0e5c30ebadc6abefdfb1ebdeeb",
+      "requests": 3,
+      "seconds": 3.1
+    },
+    "QC": {
+      "code": "QC",
+      "pruid": 24,
+      "count": 105068,
+      "rawBytes": 6342338,
+      "gzBytes": 1393982,
+      "sha256": "b2fd1ebe1305529eff9b6f31d56e9a4e212abf8e008d2d835866590da9acc122",
+      "requests": 18,
+      "seconds": 28.3
+    },
+    "ON": {
+      "code": "ON",
+      "pruid": 35,
+      "count": 137843,
+      "rawBytes": 8233427,
+      "gzBytes": 1838070,
+      "sha256": "bfa678ae6b729b8e7f94cc1a5ed2db1645be27cf8f934b05e798d64611d52144",
+      "requests": 23,
+      "seconds": 30.5
+    },
+    "MB": {
+      "code": "MB",
+      "pruid": 46,
+      "count": 32277,
+      "rawBytes": 1952220,
+      "gzBytes": 438562,
+      "sha256": "c8dbb9d776eb3521d14695337d035bb7e3fdb9212a6ebc12a253b73ee749b5c2",
+      "requests": 6,
+      "seconds": 5.7
+    },
+    "SK": {
+      "code": "SK",
+      "pruid": 47,
+      "count": 58297,
+      "rawBytes": 3524474,
+      "gzBytes": 799704,
+      "sha256": "00487f43214ba60e58627621110371145e6d0bea296708583c2aabd7d91a45b4",
+      "requests": 10,
+      "seconds": 9.9
+    },
+    "AB": {
+      "code": "AB",
+      "pruid": 48,
+      "count": 68167,
+      "rawBytes": 4113645,
+      "gzBytes": 925103,
+      "sha256": "af4f73dcc52a77243d766571a3e8dee8e2787b73230f1b4f80997900fe86cb51",
+      "requests": 12,
+      "seconds": 11.8
+    },
+    "BC": {
+      "code": "BC",
+      "pruid": 59,
+      "count": 52387,
+      "rawBytes": 3164023,
+      "gzBytes": 704682,
+      "sha256": "0e28d7c54930365984d7f007fad471765c4096e099424f591d33310b6ddee4a2",
+      "requests": 9,
+      "seconds": 9
+    },
+    "YT": {
+      "code": "YT",
+      "pruid": 60,
+      "count": 1437,
+      "rawBytes": 86852,
+      "gzBytes": 20173,
+      "sha256": "0fa3244b048d125c9fafa18a423adef55d0e0334ccea809f4365fb754e2c70f0",
+      "requests": 1,
+      "seconds": 0.5
+    },
+    "NT": {
+      "code": "NT",
+      "pruid": 61,
+      "count": 1289,
+      "rawBytes": 77786,
+      "gzBytes": 18052,
+      "sha256": "75654c11fd2b7fdfa4b846f31dcd80a98014c456755cd1fc472d3e6cfab759c3",
+      "requests": 1,
+      "seconds": 0.5
+    },
+    "NU": {
+      "code": "NU",
+      "pruid": 62,
+      "count": 777,
+      "rawBytes": 46774,
+      "gzBytes": 10805,
+      "sha256": "4c9b48b7cad3c862c211b5f6a881507128d6af856c2e8d66621c861176e6411e",
+      "requests": 1,
+      "seconds": 0.5
+    }
+  },
+  "built": "2026-08-14T01:34:22.527Z",
+  "totalBlocks": 498547,
+  "totalGzBytes": 6711367,
+  "totalRawBytes": 30016810,
+  "rollupSha256": "c9b475588ce2235fcef0da628fb38080984e1eb70f8a6579ebe13101b3c64cad"
+}
