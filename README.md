@@ -4,7 +4,7 @@ Staging of Statistics Canada open-licence census geography files (92-151-X Geogr
 Attribute Files 2011/2016/2021, 92-156-X Correspondence Files 2016/2021, Table
 17-10-0155-01 population estimates). File integrity: sha256 per file in manifest.txt.
 
-Adapted from Statistics Canada, 2021 Census Geographic Attribute File (92-151-X), 2016 and 2021 Census Correspondence Files (92-156-X), and Table 17-10-0155-01, 2011/2016/2021 reference years. This does not constitute an endorsement by Statistics Canada of this product. Licence: Statistics Canada Open Licence.
+Adapted from Statistics Canada, 2021 Census Geographic Attribute File (92-152-X), 2016 and 2021 Census Correspondence Files (92-156-X), and Table 17-10-0155-01, 2011/2016/2021 reference years. This does not constitute an endorsement by Statistics Canada of this product. Licence: Statistics Canada Open Licence.
 
 ## Pre-registered result commitment (committed 2026-08-13; artifacts frozen 2026-08-09)
 
