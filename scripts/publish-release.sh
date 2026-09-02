@@ -163,9 +163,16 @@ for i in $(seq 0 $((TOTAL - 1))); do
   [ -f "$DEST_DIR/$name" ] || { echo "publish-release: $DEST_DIR/$name is missing -- run stage-sources.sh first" >&2; exit 1; }
 done
 
+# The attribution is READ from sources.json, never carried here. Three
+# hand-maintained copies of this sentence is exactly how it came to be wrong in
+# all three places at once; sources.json is the one canonical copy and
+# tests/run.sh checks README.md and LICENSE against it.
+ATTRIBUTION="$(jq -r '.attribution // empty' "$SOURCES_FILE")"
+[ -n "$ATTRIBUTION" ] || { echo "publish-release: $SOURCES_FILE carries no .attribution -- refusing to publish a release with no Statistics Canada attribution" >&2; exit 2; }
+
 notes="Statistics Canada open-licence source files, verified byte-for-byte against the pinned sizes and SHA-256 values in sources.json.
 
-Adapted from Statistics Canada. This does not constitute an endorsement by Statistics Canada of this product. Licence: Statistics Canada Open Licence."
+$ATTRIBUTION"
 
 payload="$(jq -n --arg tag "$TAG" --arg name "$TAG" --arg body "$notes" \
   '{tag_name: $tag, name: $name, body: $body, draft: false, prerelease: false}')"

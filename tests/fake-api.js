@@ -75,6 +75,12 @@ const server = http.createServer((req, res) => {
     return req.on('end', () => {
       let parsed = {};
       try { parsed = JSON.parse(body); } catch { /* recorded as empty */ }
+      // Record the payload verbatim. T9 reads THIS -- what the server actually
+      // received -- rather than grepping the script's source, which would pass
+      // even if the value never reached the request body.
+      if (process.env.FAKE_API_RELEASE_LOG) {
+        fs.writeFileSync(process.env.FAKE_API_RELEASE_LOG, body);
+      }
       json(201, {
         id: 1,
         tag_name: parsed.tag_name,
