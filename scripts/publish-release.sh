@@ -63,6 +63,13 @@ done
 [ -n "$TAG" ] || TAG="sources-$(date -u +%Y-%m-%d)"
 
 TOTAL="$(jq -r '.sources | length' "$SOURCES_FILE")"
+
+# The attribution is READ from sources.json, never carried here. Three
+# hand-maintained copies of this sentence is exactly how it came to be wrong in
+# all three places at once; sources.json is the one canonical copy and
+# tests/run.sh checks README.md and LICENSE against it.
+ATTRIBUTION="$(jq -r '.attribution // empty' "$SOURCES_FILE")"
+[ -n "$ATTRIBUTION" ] || { echo "publish-release: $SOURCES_FILE carries no .attribution -- refusing to publish a release with no Statistics Canada attribution" >&2; exit 2; }
 API="${API%/}"
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/publish-release.XXXXXXXX")"
@@ -162,13 +169,6 @@ for i in $(seq 0 $((TOTAL - 1))); do
   name="$(jq -r ".sources[$i].name" "$SOURCES_FILE")"
   [ -f "$DEST_DIR/$name" ] || { echo "publish-release: $DEST_DIR/$name is missing -- run stage-sources.sh first" >&2; exit 1; }
 done
-
-# The attribution is READ from sources.json, never carried here. Three
-# hand-maintained copies of this sentence is exactly how it came to be wrong in
-# all three places at once; sources.json is the one canonical copy and
-# tests/run.sh checks README.md and LICENSE against it.
-ATTRIBUTION="$(jq -r '.attribution // empty' "$SOURCES_FILE")"
-[ -n "$ATTRIBUTION" ] || { echo "publish-release: $SOURCES_FILE carries no .attribution -- refusing to publish a release with no Statistics Canada attribution" >&2; exit 2; }
 
 notes="Statistics Canada open-licence source files, verified byte-for-byte against the pinned sizes and SHA-256 values in sources.json.
 
