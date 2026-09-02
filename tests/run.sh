@@ -20,7 +20,16 @@
 #
 #   ./tests/run.sh
 
+# errexit is deliberately NOT enabled. Every case here is EXPECTED to run a
+# command that exits non-zero, and the point is to report that as a result --
+# a suite that aborted on the first failing command could not test failures at
+# all. `set +e` below is therefore the standing state, and restoring it with
+# `set -e` (as this file did until the CI item) silently turned errexit ON from
+# the first case onward, leaving a trap for the next command added outside an
+# `if`. Measured: with the old pair, a bare `false` after the first case killed
+# the run; without it, the run continues and reports.
 set -uo pipefail
+set +e
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -88,7 +97,6 @@ run_case() {  # run_case <label> <default-mode> <victim-name> <victim-mode> <exp
   bash scripts/stage-sources.sh --sources "$s" --dest "$d" --manifest "$m" \
     > "$SUITE_TMP/${label}.out" 2>&1
   local rc=$?
-  set -e
 
   echo "  --- ${label} (exit $rc) ---"
   CASE_RC="$rc"; CASE_OUT="$SUITE_TMP/${label}.out"; CASE_DEST="$d"
@@ -179,7 +187,6 @@ GITHUB_TOKEN=test-token GITHUB_API_URL="http://127.0.0.1:$API_PORT" \
   bash scripts/publish-release.sh --repo tamur-cyber/geo-staging-2026 \
        --tag sources-2026-01-01 > "$SUITE_TMP/T6.out" 2>&1
 T6_RC=$?
-set -e
 echo "  --- T6 (exit $T6_RC) ---"
 check "T6 exit code is non-zero" "$([ "$T6_RC" -ne 0 ] && echo yes || echo no)" "yes"
 check "T6 refused as a collision" "$(grep -c 'TAG COLLISION WITH DIFFERING CONTENT' "$SUITE_TMP/T6.out")" "1"
@@ -205,7 +212,6 @@ GITHUB_TOKEN=test-token GITHUB_API_URL="http://127.0.0.1:$API_PORT" \
   bash scripts/publish-release.sh --repo tamur-cyber/geo-staging-2026 \
        --tag sources-2026-01-01 > "$SUITE_TMP/T6b.out" 2>&1
 T6B_RC=$?
-set -e
 echo "  --- T6b (exit $T6B_RC) ---"
 check "T6b exit code is 0" "$T6B_RC" "0"
 check "T6b reported identical" "$(grep -c 'byte-identical to the pins' "$SUITE_TMP/T6b.out")" "1"
@@ -229,7 +235,6 @@ GITHUB_TOKEN=test-token GITHUB_API_URL="http://127.0.0.1:$API_PORT" \
   bash scripts/publish-release.sh --repo tamur-cyber/geo-staging-2026 \
        --tag sources-2026-01-01 > "$SUITE_TMP/T6c.out" 2>&1
 T6C_RC=$?
-set -e
 echo "  --- T6c (exit $T6C_RC) ---"
 check "T6c exit code is 0" "$T6C_RC" "0"
 check "T6c uploaded all 8 assets" "$(wc -l < "$API_LOG" | tr -d ' ')" "8"
@@ -242,6 +247,60 @@ check "T6c every uploaded asset is the full pinned length" "$t6c_sizes" "1"
 kill "$API_PID" 2>/dev/null; API_PID=""
 echo
 
+# ---- T7/T8/T9: the Statistics Canada attribution cannot drift -------------
+# The canonical string lives in ONE place, sources.json. It is READ from there
+# here -- never written into this file -- so these cases prove the COPIES AGREE
+# with the canonical text rather than proving the suite agrees with itself.
+# It came to be wrong in three places at once because there were three
+# hand-maintained copies; that is what these guard against happening again.
+ATTRIBUTION="$(jq -r '.attribution // empty' sources.json)"
+echo "T7-T9  the canonical attribution, read from sources.json"
+check "canonical attribution is present in sources.json" \
+      "$([ -n "$ATTRIBUTION" ] && echo yes || echo no)" "yes"
+check "canonical attribution is a single line" \
+      "$(printf '%s' "$ATTRIBUTION" | wc -l | tr -d ' ')" "0"
+echo
+
+echo "T7  README.md carries the canonical string, byte-for-byte"
+check "T7 README.md contains it exactly" \
+      "$(grep -cF -- "$ATTRIBUTION" README.md)" "1"
+echo
+
+echo "T8  LICENSE carries the canonical string, byte-for-byte"
+check "T8 LICENSE contains it exactly" \
+      "$(grep -cF -- "$ATTRIBUTION" LICENSE)" "1"
+echo
+
+# T9 observes what would actually be PUBLISHED. It reads the release-creation
+# payload the fake API received, not the script's source -- a grep of the source
+# would pass even if the value never reached the request body.
+echo "T9  a created release carries the canonical string in its body"
+: > "$API_LOG"
+REL_LOG="$SUITE_TMP/release-body.json"; : > "$REL_LOG"
+FAKE_API_MODE=absent FAKE_API_UPLOAD_LOG="$API_LOG" FAKE_API_RELEASE_LOG="$REL_LOG" \
+  node tests/fake-api.js > "$SUITE_TMP/api4.port" 2>"$SUITE_TMP/api4.err" &
+API_PID=$!
+for _ in $(seq 1 50); do
+  API_PORT="$(sed -n 's/^PORT=//p' "$SUITE_TMP/api4.port" 2>/dev/null)"
+  [ -n "$API_PORT" ] && break
+  sleep 0.1
+done
+GITHUB_TOKEN=test-token GITHUB_API_URL="http://127.0.0.1:$API_PORT" \
+  bash scripts/publish-release.sh --repo tamur-cyber/geo-staging-2026 \
+       --tag sources-2026-01-01 > "$SUITE_TMP/T9.out" 2>&1
+T9_RC=$?
+kill "$API_PID" 2>/dev/null; API_PID=""
+echo "  --- T9 (exit $T9_RC) ---"
+check "T9 the release was created" "$T9_RC" "0"
+check "T9 the fake API recorded a release-creation payload" \
+      "$([ -s "$REL_LOG" ] && echo yes || echo no)" "yes"
+# Compare the body the SERVER received against the canonical string.
+T9_BODY="$(jq -r '.body // empty' "$REL_LOG" 2>/dev/null)"
+check "T9 the published body contains the canonical string exactly" \
+      "$(printf '%s' "$T9_BODY" | grep -cF -- "$ATTRIBUTION")" "1"
+check "T9 the published body carries no OTHER 'Adapted from Statistics Canada'" \
+      "$(printf '%s' "$T9_BODY" | grep -cF 'Adapted from Statistics Canada')" "1"
+echo
 echo "================================================================"
 echo "  passed: $PASS   failed: $FAIL"
 echo "================================================================"

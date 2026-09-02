@@ -1,0 +1,59 @@
+name: tests
+
+# WHY THIS FILE EXISTS
+# PR #1 removed the `push` trigger from stage.yml -- correctly, because that
+# trigger's only remaining job was to feed a loop guard. The side effect was that
+# NO trigger anywhere ran tests/run.sh, so the suite was only ever executed by
+# hand. This runs it.
+#
+# TRIGGERS, and the loop reasoning for each:
+#
+#   pull_request      the point of the file. For a same-repo PR, GitHub takes the
+#                     workflow from the merge ref, so a change to the suite is
+#                     tested by the version of the suite in that same PR.
+#   workflow_dispatch a manual button, for re-running after a flake or against a
+#                     branch once this file is on the default branch.
+#   push (main)       included, and the reasoning is structural rather than a
+#                     convention: this workflow declares `contents: read`, so its
+#                     token CANNOT push. It therefore cannot generate a push
+#                     event and cannot trigger itself. The one interaction worth
+#                     naming is stage.yml, which DOES push manifest commits to
+#                     main -- those will start a run of this workflow, that run
+#                     pushes nothing, and the chain stops there. One extra run,
+#                     never a loop.
+#
+# What push-on-main buys that pull_request does not: it tests the merged result,
+# and it catches a commit pushed straight to main without a PR.
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# Read-only, deliberately. This job builds nothing, publishes nothing and pushes
+# nothing, and the absence of write is what makes the loop argument above hold
+# by construction instead of by good intentions.
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # jq, node and curl are all present on ubuntu-latest; nothing is installed.
+      # Recorded in the log so a future toolchain change is visible in the run
+      # that first trips over it rather than being guessed at afterwards.
+      - name: record the toolchain
+        run: |
+          jq   --version
+          node --version
+          curl --version | head -1
+          unzip -v | head -1
+
+      # No `continue-on-error`, no `|| true`, no pipe. tests/run.sh exits 1 when
+      # any case fails, and that exit code is the step's, and the step's is the
+      # job's. That is what makes the check go red.
+      - name: run the suite
+        run: ./tests/run.sh
