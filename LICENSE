@@ -1,0 +1,59 @@
+LICENSING FOR THIS REPOSITORY
+=============================
+
+This repository has two kinds of content and they are not under the same terms.
+
+
+1. THE STATISTICS CANADA DATA
+-----------------------------
+
+Everything staged under data/, and every file published as an asset of a
+release of this repository, is Statistics Canada material made available under
+the STATISTICS CANADA OPEN LICENCE.
+
+The required statement for this material, reproduced exactly as it appears in
+this repository's README:
+
+    Adapted from Statistics Canada. This does not constitute an endorsement by
+    Statistics Canada of this product. Licence: Statistics Canada Open Licence.
+
+Anyone redistributing this material, in whole or in part, must carry that
+statement with it and must comply with the licence in full.
+
+THE AUTHORITATIVE TEXT OF THE LICENCE IS NOT REPRODUCED HERE, DELIBERATELY.
+Statistics Canada publishes it, and a paraphrase or a remembered copy of a
+licence is worse than a pointer to the real one. Read it at Statistics Canada's
+own site:
+
+    https://www.statcan.gc.ca/en/terms-conditions/open-licence
+
+(An older path, https://www.statcan.gc.ca/en/reference/licence, has also served
+this licence. If the two ever disagree, the text Statistics Canada is currently
+publishing governs -- not this file.)
+
+Among the licence's terms, and the reason the statement above is worded as it
+is: a product that ADAPTS Statistics Canada information must not be annotated
+in any way that could be read as an endorsement by Statistics Canada, and must
+not imply exclusive access to, or an exclusive distribution arrangement for,
+Statistics Canada information.
+
+
+2. THIS REPOSITORY'S OWN CODE
+-----------------------------
+
+The workflow, the scripts under scripts/, and the tests under tests/ are not
+Statistics Canada material and are not covered by the licence above. They are
+the work of this repository's owner.
+
+No licence has been chosen for them. Until one is, no permissions beyond those
+GitHub's Terms of Service grant for public repositories should be assumed.
+
+
+3. WHAT IS NOT COVERED BY EITHER SECTION
+----------------------------------------
+
+data/blocks/, data/mapworthy-blocks-sample.ndjson.gz and
+data/mapworthy-block-layer-meta.json are derived from Statistics Canada's
+public cartographic boundary web service and are therefore Statistics Canada
+material under section 1. They are not produced by the workflow in this
+repository and are not published as release assets by it.

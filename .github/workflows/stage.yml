@@ -1,52 +1,85 @@
 name: stage
+
+# TRIGGERS -- and why `push` is NOT among them.
+#
+# The old workflow ran on `push: [main]` and carried
+#     if: ${{ !contains(github.event.head_commit.message, '[data]') }}
+# whose only job was to stop the workflow's own commit re-triggering it. That
+# guard worked, but it made the loop safety depend on a string in a commit
+# message that a human writes -- and this workflow still commits and pushes
+# manifest.txt, so the loop is still reachable. Reasoning about it again:
+#
+#   * `workflow_dispatch` and `schedule` deliver NO head_commit, so the guard
+#     evaluates `contains(null, '[data]')` -> false -> `!false` -> true. It is
+#     inert on exactly the two triggers that remain.
+#   * With `push` gone there is no self-trigger at all, so the guard has nothing
+#     left to guard and is removed rather than left as dead logic that reads
+#     like protection.
+#   * Nothing is lost. This job fetches files from Statistics Canada; whether
+#     somebody pushed a commit here has no bearing on whether those files
+#     changed. A button plus a schedule covers every real reason to run it.
+#
+# IF YOU RE-ADD `push`, RE-ADD THE GUARD. The commit step below pushes to main,
+# and without the guard that push starts the job again, forever.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+  # Monthly. These are census geography reference files -- 92-151-X and
+  # 92-156-X are census-cycle products and 17-10-0155 is annual, so nothing
+  # here changes on a weekly horizon and a monthly check finds drift long
+  # before anyone needs the data. Deliberately not at :00 and not on the 1st:
+  # GitHub warns that runs scheduled on the hour are the most delayed, and the
+  # start of a month is the busiest slot.
+  schedule:
+    - cron: '17 4 3 * *'   # 04:17 UTC on the 3rd of each month
+
 permissions:
-  contents: write
+  contents: write          # needed to push manifest.txt AND to create the release
+
+concurrency:
+  # Two runs uploading assets to the same dated tag would race the collision
+  # check. One at a time, and never cancel one mid-upload.
+  group: stage-sources
+  cancel-in-progress: false
+
 jobs:
-  fetch:
-    if: ${{ !contains(github.event.head_commit.message, '[data]') }}
+  stage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: fetch statcan open licence files
+
+      # Downloads every pinned source to a temp directory, verifies each against
+      # the size and sha256 in sources.json, and only then writes anything into
+      # data/. Exits non-zero if ANY source fails, and on failure writes nothing
+      # at all -- so a bad upstream can no longer overwrite good bytes, and can
+      # no longer leave this job green.
+      - name: fetch and verify pinned statcan sources
+        run: ./scripts/stage-sources.sh
+
+      # GIT HOLDS THE RECORD. manifest.txt is the provenance record and stays in
+      # version control. The archives themselves are NOT added here any more --
+      # they go to the release below.
+      #
+      # The files already committed under data/ are left exactly as they are:
+      # nothing is removed, nothing is ignored, no history is rewritten. If a
+      # re-fetch produces identical bytes, `git add manifest.txt` finds nothing
+      # to commit and this step is a no-op.
+      - name: commit the manifest
         run: |
-          mkdir -p data
-          : > manifest.txt
-          ok=0
-          for u in \
-            "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip" \
-            "https://www12.statcan.gc.ca/census-recensement/2016/geo/ref/gaf/files-fichiers/2016_92-151_XBB_csv.zip" \
-            "https://www12.statcan.gc.ca/census-recensement/2011/geo/ref/files-fichiers/2011_92-151_XBB_txt.zip" \
-            "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/correspondence-correspondance/files-fichiers/2021_92-156-X_DB_ID.zip" \
-            "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/correspondence-correspondance/files-fichiers/2021_92-156-X_DA_AD.zip" \
-            "https://www12.statcan.gc.ca/census-recensement/2011/geo/ref/files-fichiers/2016/2016_92-156_DB_ID_csv.zip" \
-            "https://www12.statcan.gc.ca/census-recensement/2011/geo/ref/files-fichiers/2016/2016_92-156_DA_AD_csv.zip" \
-            "https://www150.statcan.gc.ca/n1/tbl/csv/17100155-eng.zip"
-          do
-            f="data/$(basename "${u%%\?*}")"
-            echo "== $u"
-            if curl -fL --retry 4 --retry-delay 5 -A "Mozilla/5.0" -o "$f" "$u"; then
-              sz=$(stat -c%s "$f")
-              sha=$(sha256sum "$f" | cut -d' ' -f1)
-              echo "OK $(basename "$f") $sz $sha" >> manifest.txt
-              if [ "$sz" -gt 99000000 ]; then
-                split -b 90M -d "$f" "$f.part"
-                rm "$f"
-                echo "SPLIT $(basename "$f")" >> manifest.txt
-              fi
-              ok=$((ok+1))
-            else
-              echo "FAIL $u" >> manifest.txt
-            fi
-          done
-          echo "TOTAL_OK $ok/8" >> manifest.txt
-          cat manifest.txt
-      - name: commit data
-        run: |
-          git config user.name "staging-bot"
+          set -euo pipefail
+          git config user.name  "staging-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data manifest.txt
-          git commit -m "stage files [data]" || echo "nothing to commit"
-          git push
+          git add manifest.txt
+          if git diff --cached --quiet; then
+            echo "manifest unchanged; nothing to commit"
+          else
+            git commit -m "stage files [data]"
+            git push
+          fi
+
+      # RELEASES HOLD THE BYTES. A pinned, dated tag -- never `latest`, because
+      # /releases/latest/download/<file> resolves at request time and 404s as
+      # soon as a newer release does not carry that exact filename.
+      - name: publish the sources as release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # minted per job; no stored secret
+        run: ./scripts/publish-release.sh
